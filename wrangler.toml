@@ -1,0 +1,19 @@
+name = "form-monitor"
+main = "src/worker.js"
+compatibility_date = "2026-07-31"
+
+[vars]
+ALLOWED_ORIGIN = "https://giving.hillsongberlin.de"
+ALERT_THRESHOLD = "3"
+ALERT_WINDOW_MINUTES = "10"
+ALERT_COOLDOWN_MINUTES = "60"
+RECOVERY_WINDOW_MINUTES = "15"
+MAX_EVENTS_PER_CLIENT_PER_HOUR = "30"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "form-monitor"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[triggers]
+crons = ["*/5 * * * *"]
