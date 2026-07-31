@@ -1,5 +1,5 @@
 {
-  "name": "giving-form-monitor",
+  "name": "form-monitor",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -7,10 +7,10 @@
     "test": "node --test",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "db:local": "wrangler d1 execute giving-form-monitor --local --file=./schema.sql",
-    "db:remote": "wrangler d1 execute giving-form-monitor --remote --file=./schema.sql"
+    "db:local": "wrangler d1 execute form-monitor --local --file=./schema.sql",
+    "db:remote": "wrangler d1 execute form-monitor --remote --file=./schema.sql"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.116.0"
   }
 }
