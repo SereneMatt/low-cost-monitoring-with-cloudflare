@@ -21,10 +21,10 @@ npm install
 npx wrangler login
 ```
 
-Create the database:
+D1 was created using:
 
 ```sh
-npx wrangler d1 create giving-form-monitor
+npx wrangler d1 create form-monitor
 ```
 
 Copy the returned `database_id` into `wrangler.toml`, then create the tables:
@@ -61,7 +61,7 @@ npm run deploy
 Add a Cloudflare Worker custom domain:
 
 ```text
-monitor.giving.hillsongberlin.de
+https://low-cost.workers.dev
 ```
 
 The Worker exposes:
@@ -73,7 +73,7 @@ POST /form-error
 
 ## 4. Install the browser monitor
 
-Copy `site/form-monitor.js` to the giving site and load it in `<head>` before
+Copy `site/form-monitor.js` to the site and load it in `<head>` before
 `config.js` and `donor-form-loader.js`:
 
 ```html
@@ -96,7 +96,7 @@ script.onerror = function () {
 If the page has a Content Security Policy, add the endpoint to `connect-src`:
 
 ```text
-connect-src 'self' https://monitor.giving.hillsongberlin.de
+connect-src 'self' https://form-monitor.low-cost.workers.dev/
 ```
 
 ## 5. Verify end to end
@@ -104,13 +104,13 @@ connect-src 'self' https://monitor.giving.hillsongberlin.de
 Health check:
 
 ```sh
-curl https://monitor.giving.hillsongberlin.de/health
+curl https://form-monitor.low-cost.workers.dev/health
 ```
 
 Send a safe test event:
 
 ```sh
-curl -X POST https://monitor.giving.hillsongberlin.de/form-error \
+curl -X POST https://form-monitor.low-cost.workers.dev/ \
   -H 'Origin: https://giving.hillsongberlin.de' \
   -H 'Content-Type: text/plain' \
   --data '{"type":"iframe_not_created","browserFamily":"Test","browserMajor":"1","osFamily":"Test","pageVersion":"manual-test"}'

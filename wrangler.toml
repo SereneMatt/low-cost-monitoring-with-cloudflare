@@ -1,9 +1,9 @@
 name = "form-monitor"
 main = "src/worker.js"
-compatibility_date = "2026-07-31"
+compatibility_date = "2026-07-30"
 
 [vars]
-ALLOWED_ORIGIN = "https://giving.hillsongberlin.de"
+ALLOWED_ORIGIN = "https://my_cool_app.com"
 ALERT_THRESHOLD = "3"
 ALERT_WINDOW_MINUTES = "10"
 ALERT_COOLDOWN_MINUTES = "60"
