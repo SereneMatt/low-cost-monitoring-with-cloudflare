@@ -14,20 +14,27 @@ It provides:
 
 ## 1. Create the Cloudflare resources
 
-Install dependencies and authenticate:
+This project pins Node with [mise](https://mise.jdx.dev/). Install the pinned
+version, then install dependencies and authenticate:
 
 ```sh
+mise install
 npm install
-npx wrangler login
+cf auth login
 ```
 
 D1 was created using:
 
 ```sh
-npx wrangler d1 create form-monitor
+cf d1 create --name form-monitor
 ```
 
-Copy the returned `database_id` into `wrangler.toml`, then create the tables:
+Copy `.env.example` to `.env`. Set `D1_DATABASE_ID` to the id this command
+prints, and set `ALLOWED_ORIGIN` to the site that may report errors. `.env`
+stays on the machine you deploy from. The files in git keep generic
+placeholders.
+
+Create the tables:
 
 ```sh
 npm run db:remote
@@ -38,18 +45,9 @@ npm run db:remote
 In Slack, create or select a Slack app, enable **Incoming Webhooks**, and add a
 webhook for the channel that should receive monitoring alerts.
 
-Store the webhook and rate-limit salt as Cloudflare secrets so neither value is
-committed to Git:
-
-```sh
-npx wrangler secret put SLACK_WEBHOOK_URL
-npx wrangler secret put RATE_LIMIT_SALT
-```
-
-Paste the full Slack webhook URL when Wrangler prompts for
-`SLACK_WEBHOOK_URL`.
-
-Use a random value of at least 32 characters for `RATE_LIMIT_SALT`.
+Add the webhook and a rate-limit salt of at least 32 random characters to
+`.env`, as `SLACK_WEBHOOK_URL` and `RATE_LIMIT_SALT`. `.env` is gitignored.
+`npm run dev` and `npm run deploy` read it from the machine you deploy from.
 
 ## 3. Deploy
 
@@ -111,7 +109,7 @@ Send a safe test event:
 
 ```sh
 curl -X POST https://form-monitor.low-cost.workers.dev/ \
-  -H 'Origin: https://giving.hillsongberlin.de' \
+  -H 'Origin: https://my_cool_app.com' \
   -H 'Content-Type: text/plain' \
   --data '{"type":"iframe_not_created","browserFamily":"Test","browserMajor":"1","osFamily":"Test","pageVersion":"manual-test"}'
 ```
@@ -132,7 +130,12 @@ another alert during the 60-minute cooldown.
 | Aggregate retention     |         30 days |
 | Rate-limit retention    |        48 hours |
 
-Adjust these values in `wrangler.toml`.
+Adjust the thresholds in `cloudflare.config.ts`. Set the allowed site and
+database id in `.env` on the machine you deploy from.
+
+`cf` does not stream live logs yet. To tail the Worker, run
+`npx wrangler tail form-monitor`. `wrangler.toml` stays in the repo for that
+command and for the Wrangler bundler that `cf dev` and `cf deploy` use.
 
 ## Privacy notes
 

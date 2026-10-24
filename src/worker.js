@@ -1,4 +1,5 @@
 import {
+  alertsOnEvent,
   corsHeaders,
   hourBucket,
   integerSetting,
@@ -111,6 +112,8 @@ async function recordEvent(db, event, now) {
 }
 
 async function maybeOpenAlert(env, eventType, now) {
+  if (!alertsOnEvent(eventType)) return;
+
   const threshold = integerSetting(env.ALERT_THRESHOLD, 3, 1, 1000);
   const windowMinutes = integerSetting(env.ALERT_WINDOW_MINUTES, 10, 1, 1440);
   const cooldownMinutes = integerSetting(env.ALERT_COOLDOWN_MINUTES, 60, 5, 10080);

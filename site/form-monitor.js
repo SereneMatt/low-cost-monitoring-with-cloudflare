@@ -2,7 +2,7 @@
   'use strict';
 
   var ENDPOINT = 'https://monitor.form.de/form-error';
-  var PAGE_VERSION = '2026-07-31';
+  var PAGE_VERSION = '2026-10-24';
   var TIMEOUT_MS = 10000;
   var reported = {};
 
@@ -64,6 +64,112 @@
     };
   }
 
+  var walletState = { applePay: false, googlePay: false, ios: false };
+
+  function classifyWalletMessage(message, state) {
+    var next = {
+      applePay: state.applePay === true,
+      googlePay: state.googlePay === true,
+      ios: state.ios === true,
+    };
+    if (!message || typeof message !== 'object') return { type: null, state: next };
+
+    if (message.type === 'canMakePayment') {
+      var result = message.result;
+      next.applePay = !!(result && result.applePay === true);
+      next.googlePay = !!(result && result.googlePay === true);
+      return { type: next.applePay ? 'apple_pay_available' : null, state: next };
+    }
+
+    if (message.type === 'libraryMissingError') {
+      return { type: 'apple_pay_library_missing', state: next };
+    }
+
+    if (message.type === 'paymentCancel' || message.type === 'walletPayParentReady') {
+      return { type: null, state: next };
+    }
+
+    var success = message.type === 'paymentSuccess';
+    var failure = message.type === 'paymentError' || message.type === 'generalError';
+    if (!success && !failure) return { type: null, state: next };
+
+    if (next.applePay && !next.googlePay) {
+      return { type: success ? 'apple_pay_success' : 'apple_pay_error', state: next };
+    }
+
+    if (next.applePay && next.googlePay) {
+      if (next.ios) return { type: success ? 'apple_pay_success' : 'apple_pay_error', state: next };
+      return { type: success ? 'wallet_payment_success' : 'wallet_payment_error', state: next };
+    }
+
+    if (next.googlePay) {
+      if (message.type === 'generalError') return { type: 'wallet_payment_error', state: next };
+      return { type: null, state: next };
+    }
+
+    if (next.ios) {
+      return { type: success ? 'apple_pay_success' : 'apple_pay_error', state: next };
+    }
+
+    if (message.type === 'generalError') {
+      return { type: 'wallet_payment_error', state: next };
+    }
+
+    return { type: null, state: next };
+  }
+
+  function observeWalletMessage(message) {
+    if (!walletState.ios && detectBrowser().osFamily === 'iOS') walletState.ios = true;
+    var outcome = classifyWalletMessage(message, walletState);
+    walletState = outcome.state;
+    if (outcome.type) report(outcome.type);
+  }
+
+  function installWalletObserver() {
+    var iframe = document.getElementById('fbIframe');
+    if (!iframe || !iframe.contentWindow) return false;
+    if (!iframe.__givingWalletLoadHook && typeof iframe.addEventListener === 'function') {
+      try {
+        iframe.addEventListener('load', function () {
+          installWalletObserver();
+        });
+        iframe.__givingWalletLoadHook = true;
+      } catch (ignore) {
+        /* attaching the load hook must not stop the payment frame */
+      }
+    }
+
+    var frameWindow = iframe.contentWindow;
+    if (iframe.__givingWalletWindow === frameWindow) return true;
+    var original = frameWindow.postMessage;
+    if (typeof original !== 'function') return false;
+
+    try {
+      frameWindow.postMessage = function (message, targetOrigin, transfer) {
+        try {
+          observeWalletMessage(message);
+        } catch (ignore) {
+          /* keep the payment bridge working */
+        }
+        if (arguments.length >= 3) return original.call(frameWindow, message, targetOrigin, transfer);
+        return original.call(frameWindow, message, targetOrigin);
+      };
+      iframe.__givingWalletWindow = frameWindow;
+      return true;
+    } catch (ignore) {
+      return false;
+    }
+  }
+
+  function watchWalletBridge() {
+    if (typeof MutationObserver !== 'function' || !document.documentElement) return;
+    var observer = new MutationObserver(function () {
+      if (installWalletObserver()) observer.disconnect();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    if (installWalletObserver()) observer.disconnect();
+  }
+
   window.addEventListener(
     'error',
     function (event) {
@@ -82,9 +188,12 @@
     }
   }, TIMEOUT_MS);
 
+  watchWalletBridge();
+
   window.GivingFormMonitor = {
     reportLoaderFailure: function () {
       report('loader_script_failed');
     },
+    classifyWalletMessage: classifyWalletMessage,
   };
 })();

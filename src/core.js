@@ -3,7 +3,19 @@ export const ALLOWED_EVENT_TYPES = new Set([
   'iframe_loaded_without_fields',
   'loader_script_failed',
   'javascript_compatibility_error',
+  'apple_pay_available',
+  'apple_pay_success',
+  'apple_pay_error',
+  'apple_pay_library_missing',
+  'wallet_payment_success',
+  'wallet_payment_error',
 ]);
+
+const QUIET_EVENT_TYPES = new Set(['apple_pay_available', 'apple_pay_success', 'wallet_payment_success']);
+
+export function alertsOnEvent(eventType) {
+  return ALLOWED_EVENT_TYPES.has(eventType) && !QUIET_EVENT_TYPES.has(eventType);
+}
 
 const FIELD_LIMITS = {
   type: 64,
