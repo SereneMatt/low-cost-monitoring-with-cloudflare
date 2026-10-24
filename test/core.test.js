@@ -109,13 +109,13 @@ test("bounds integer settings", () => {
 
 test("only reflects the configured origin", () => {
   assert.equal(
-    corsHeaders("https://giving.hillsongberlin.de", "https://giving.hillsongberlin.de")[
+    corsHeaders("https://my_cool_app.com", "https://my_cool_app.com")[
       "Access-Control-Allow-Origin"
     ],
-    "https://giving.hillsongberlin.de",
+    "https://my_cool_app.com",
   );
   assert.equal(
-    corsHeaders("https://evil.example", "https://giving.hillsongberlin.de")[
+    corsHeaders("https://evil.example", "https://my_cool_app.com")[
       "Access-Control-Allow-Origin"
     ],
     undefined,

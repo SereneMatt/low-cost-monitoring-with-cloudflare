@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "dev": "cf dev",
-    "deploy": "cf deploy",
-    "db:local": "cf d1 raw REPLACE_WITH_D1_DATABASE_ID --local --sql \"$(cat ./schema.sql)\"",
-    "db:remote": "cf d1 raw REPLACE_WITH_D1_DATABASE_ID --sql \"$(cat ./schema.sql)\""
+    "dev": "node --env-file=.env ./node_modules/.bin/cf dev",
+    "deploy": "node --env-file=.env scripts/deploy.mjs",
+    "db:local": "node --env-file=.env scripts/apply-schema.mjs --local",
+    "db:remote": "node --env-file=.env scripts/apply-schema.mjs"
   },
   "devDependencies": {
     "cf": "^1.0.0-beta.21",
