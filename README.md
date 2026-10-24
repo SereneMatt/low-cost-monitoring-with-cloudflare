@@ -134,6 +134,24 @@ another alert during the 60-minute cooldown.
 
 Adjust these values in `wrangler.toml`.
 
+## Apple Pay
+
+The browser snippet watches FundraisingBox wallet messages on the donation iframe.
+It reports only a category:
+
+| Event                        | Stored | Slack alert |
+| ---------------------------- | -----: | ----------: |
+| `apple_pay_available`        |    yes |          no |
+| `apple_pay_success`          |    yes |          no |
+| `apple_pay_error`            |    yes |         yes |
+| `apple_pay_library_missing`  |    yes |         yes |
+| `wallet_payment_success`     |    yes |          no |
+| `wallet_payment_error`       |    yes |         yes |
+
+`apple_pay_available` is sent when Apple Pay can be offered. A success or error is labelled Apple Pay when Apple Pay is the only available wallet, or when the browser is iOS. A Mac with both Apple Pay and Google Pay is stored as `wallet_payment_success` or `wallet_payment_error`. Closing the payment sheet is not reported. Stripe error text, amounts, and payer details are not sent.
+
+The existing form-failure events still alert exactly as before.
+
 ## Privacy notes
 
 The Worker accepts only the documented categorical fields. It does not accept
