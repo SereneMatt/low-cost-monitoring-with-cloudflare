@@ -103,6 +103,48 @@ test('does not report the donor closing the sheet or a Google Pay outcome', () =
   assert.equal(monitor.classifyWalletMessage({ type: 'paymentError' }, google).type, null);
 });
 
+test('still delivers the wallet message to the donation iframe', () => {
+  const calls = [];
+  const iframe = {
+    contentWindow: {
+      postMessage(...args) {
+        calls.push(args);
+      },
+    },
+  };
+  const sandbox = {
+    navigator: { userAgent: 'Mozilla/5.0', sendBeacon() {} },
+    document: {
+      getElementById(id) {
+        return id === 'fbIframe' ? iframe : null;
+      },
+      documentElement: {},
+    },
+    setTimeout() {},
+    MutationObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    Blob: class {},
+    XMLHttpRequest: class {},
+  };
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  sandbox.addEventListener = function () {};
+  vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(new URL('../site/form-monitor.js', import.meta.url), 'utf8'), sandbox, {
+    filename: 'site/form-monitor.js',
+  });
+
+  iframe.contentWindow.postMessage({ type: 'paymentCancel' }, 'https://secure.fundraisingbox.com');
+  iframe.contentWindow.postMessage({ type: 'paymentSuccess' }, 'https://secure.fundraisingbox.com', []);
+
+  assert.deepEqual(plain(calls), [
+    [{ type: 'paymentCancel' }, 'https://secure.fundraisingbox.com'],
+    [{ type: 'paymentSuccess' }, 'https://secure.fundraisingbox.com', []],
+  ]);
+});
+
 test('reports a missing Stripe library as an Apple Pay failure', () => {
   const monitor = loadMonitor();
   assert.equal(monitor.classifyWalletMessage({ type: 'libraryMissingError' }, idle).type, 'apple_pay_library_missing');
