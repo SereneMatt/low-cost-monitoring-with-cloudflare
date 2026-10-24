@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "db:local": "wrangler d1 execute form-monitor --local --file=./schema.sql",
-    "db:remote": "wrangler d1 execute form-monitor --remote --file=./schema.sql"
+    "dev": "cf dev",
+    "deploy": "cf deploy",
+    "db:local": "cf d1 raw REPLACE_WITH_D1_DATABASE_ID --local --sql \"$(cat ./schema.sql)\"",
+    "db:remote": "cf d1 raw REPLACE_WITH_D1_DATABASE_ID --sql \"$(cat ./schema.sql)\""
   },
   "devDependencies": {
-    "wrangler": "^4.116.0"
+    "cf": "^1.0.0-beta.21",
+    "wrangler": "^4.152.0"
   }
 }

@@ -14,20 +14,24 @@ It provides:
 
 ## 1. Create the Cloudflare resources
 
-Install dependencies and authenticate:
+This project pins Node with [mise](https://mise.jdx.dev/). Install the pinned
+version, then install dependencies and authenticate:
 
 ```sh
+mise install
 npm install
-npx wrangler login
+cf auth login
 ```
 
 D1 was created using:
 
 ```sh
-npx wrangler d1 create form-monitor
+cf d1 create --name form-monitor
 ```
 
-Copy the returned `database_id` into `wrangler.toml`, then create the tables:
+Copy the returned database id into `cloudflare.config.ts` (`DB.id`) and into
+the `db:local` and `db:remote` scripts in `package.json`, replacing
+`REPLACE_WITH_D1_DATABASE_ID`. Then create the tables:
 
 ```sh
 npm run db:remote
@@ -42,12 +46,18 @@ Store the webhook and rate-limit salt as Cloudflare secrets so neither value is
 committed to Git:
 
 ```sh
-npx wrangler secret put SLACK_WEBHOOK_URL
-npx wrangler secret put RATE_LIMIT_SALT
+cat > .dev.vars << 'EOF'
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+RATE_LIMIT_SALT=replace-with-at-least-32-random-characters
+EOF
 ```
 
-Paste the full Slack webhook URL when Wrangler prompts for
-`SLACK_WEBHOOK_URL`.
+`.dev.vars` is gitignored. `cf dev` reads it locally. Upload the same values
+with a deploy:
+
+```sh
+cf deploy --secrets-file .dev.vars
+```
 
 Use a random value of at least 32 characters for `RATE_LIMIT_SALT`.
 
@@ -132,7 +142,11 @@ another alert during the 60-minute cooldown.
 | Aggregate retention     |         30 days |
 | Rate-limit retention    |        48 hours |
 
-Adjust these values in `wrangler.toml`.
+Adjust these values in `cloudflare.config.ts`.
+
+`cf` does not stream live logs yet. To tail the Worker, run
+`npx wrangler tail form-monitor`. `wrangler.toml` stays in the repo for that
+command and for the Wrangler bundler that `cf dev` and `cf deploy` use.
 
 ## Apple Pay
 
