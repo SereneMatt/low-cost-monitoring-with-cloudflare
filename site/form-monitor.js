@@ -93,12 +93,26 @@
     var failure = message.type === 'paymentError' || message.type === 'generalError';
     if (!success && !failure) return { type: null, state: next };
 
-    if ((next.applePay && !next.googlePay) || next.ios) {
+    if (next.applePay && !next.googlePay) {
       return { type: success ? 'apple_pay_success' : 'apple_pay_error', state: next };
     }
 
-    if ((next.applePay && next.googlePay) || message.type === 'generalError') {
+    if (next.applePay && next.googlePay) {
+      if (next.ios) return { type: success ? 'apple_pay_success' : 'apple_pay_error', state: next };
       return { type: success ? 'wallet_payment_success' : 'wallet_payment_error', state: next };
+    }
+
+    if (next.googlePay) {
+      if (message.type === 'generalError') return { type: 'wallet_payment_error', state: next };
+      return { type: null, state: next };
+    }
+
+    if (next.ios) {
+      return { type: success ? 'apple_pay_success' : 'apple_pay_error', state: next };
+    }
+
+    if (message.type === 'generalError') {
+      return { type: 'wallet_payment_error', state: next };
     }
 
     return { type: null, state: next };
@@ -113,8 +127,20 @@
 
   function installWalletObserver() {
     var iframe = document.getElementById('fbIframe');
-    if (!iframe || !iframe.contentWindow || iframe.__givingWalletObserved) return false;
+    if (!iframe || !iframe.contentWindow) return false;
+    if (!iframe.__givingWalletLoadHook && typeof iframe.addEventListener === 'function') {
+      try {
+        iframe.addEventListener('load', function () {
+          installWalletObserver();
+        });
+        iframe.__givingWalletLoadHook = true;
+      } catch (ignore) {
+        /* attaching the load hook must not stop the payment frame */
+      }
+    }
+
     var frameWindow = iframe.contentWindow;
+    if (iframe.__givingWalletWindow === frameWindow) return true;
     var original = frameWindow.postMessage;
     if (typeof original !== 'function') return false;
 
@@ -128,7 +154,7 @@
         if (arguments.length >= 3) return original.call(frameWindow, message, targetOrigin, transfer);
         return original.call(frameWindow, message, targetOrigin);
       };
-      iframe.__givingWalletObserved = true;
+      iframe.__givingWalletWindow = frameWindow;
       return true;
     } catch (ignore) {
       return false;

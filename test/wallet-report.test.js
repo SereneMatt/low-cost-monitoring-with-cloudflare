@@ -95,6 +95,17 @@ test('keeps a Mac with both wallets as a generic wallet result', () => {
   assert.equal(monitor.classifyWalletMessage({ type: 'paymentError' }, both).type, 'wallet_payment_error');
 });
 
+test('does not label Google Pay on an iPhone as Apple Pay', () => {
+  const monitor = loadMonitor();
+  const googleOnIphone = { applePay: false, googlePay: true, ios: true };
+  assert.equal(monitor.classifyWalletMessage({ type: 'paymentSuccess' }, googleOnIphone).type, null);
+  assert.equal(monitor.classifyWalletMessage({ type: 'paymentError' }, googleOnIphone).type, null);
+  assert.equal(
+    monitor.classifyWalletMessage({ type: 'generalError' }, googleOnIphone).type,
+    'wallet_payment_error'
+  );
+});
+
 test('does not report the donor closing the sheet or a Google Pay outcome', () => {
   const monitor = loadMonitor();
   const google = { applePay: false, googlePay: true, ios: false };
@@ -143,6 +154,61 @@ test('still delivers the wallet message to the donation iframe', () => {
     [{ type: 'paymentCancel' }, 'https://secure.fundraisingbox.com'],
     [{ type: 'paymentSuccess' }, 'https://secure.fundraisingbox.com', []],
   ]);
+});
+
+test('follows the donation iframe after it navigates', () => {
+  const firstCalls = [];
+  const secondCalls = [];
+  let current = {
+    postMessage(...args) {
+      firstCalls.push(args);
+    },
+  };
+  const loadListeners = [];
+  const iframe = {
+    get contentWindow() {
+      return current;
+    },
+    addEventListener(type, fn) {
+      if (type === 'load') loadListeners.push(fn);
+    },
+  };
+  const sandbox = {
+    navigator: { userAgent: 'Mozilla/5.0', sendBeacon() {} },
+    document: {
+      getElementById(id) {
+        return id === 'fbIframe' ? iframe : null;
+      },
+      documentElement: {},
+    },
+    setTimeout() {},
+    MutationObserver: class {
+      observe() {}
+      disconnect() {}
+    },
+    Blob: class {},
+    XMLHttpRequest: class {},
+  };
+  sandbox.window = sandbox;
+  sandbox.globalThis = sandbox;
+  sandbox.addEventListener = function () {};
+  vm.createContext(sandbox);
+  vm.runInContext(fs.readFileSync(new URL('../site/form-monitor.js', import.meta.url), 'utf8'), sandbox, {
+    filename: 'site/form-monitor.js',
+  });
+
+  current.postMessage({ type: 'paymentCancel' }, 'https://secure.fundraisingbox.com');
+  current = {
+    postMessage(...args) {
+      secondCalls.push(args);
+    },
+  };
+  for (const listener of loadListeners) listener();
+  current.postMessage({ type: 'paymentSuccess' }, 'https://secure.fundraisingbox.com');
+
+  assert.equal(firstCalls.length, 1);
+  assert.equal(secondCalls.length, 1);
+  assert.equal(plain(secondCalls[0][0]).type, 'paymentSuccess');
 });
 
 test('reports a missing Stripe library as an Apple Pay failure', () => {
